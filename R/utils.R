@@ -1,4 +1,3 @@
-
 # Add properly formatted validation steps
 #' @importFrom tibble tibble as_tibble
 #' @importFrom purrr map_df
@@ -9,6 +8,8 @@ create_validation_step <- function(agent,
                                    value = NULL,
                                    set = NULL,
                                    regex = NULL,
+                                   incl_na = NULL,
+                                   incl_nan = NULL,
                                    preconditions = NULL,
                                    brief = NULL,
                                    warn_count = NULL,
@@ -75,6 +76,7 @@ create_validation_step <- function(agent,
   # If a set has been provided as a vector, include
   # these values as a `df_tbl` object
   if (!is.null(set)) {
+    
     set_df <-
       1:nrow(validation_step_df) %>%
       purrr::map_df(
@@ -82,9 +84,14 @@ create_validation_step <- function(agent,
           tibble::tibble(
             x = x,
             set = paste(set, collapse = ","),
-            class = class(set))}) %>%
+            class = class(set),
+            incl_na = ifelse(is.null(incl_na), FALSE, incl_na),
+            incl_nan = ifelse(is.null(incl_nan), FALSE, incl_nan))
+          }) %>%
       dplyr::select(-x)
+    
   } else {
+    
     set_df <-
       1:nrow(validation_step_df) %>%
       purrr::map_df(
@@ -92,13 +99,17 @@ create_validation_step <- function(agent,
           tibble::tibble(
             x = x,
             set = as.character(NA),
-            class = as.character(NA))}) %>%
+            class = as.character(NA),
+            incl_na = FALSE,
+            incl_nan = FALSE)
+          }) %>%
       dplyr::select(-x)
   }
   
   # If preconditions have been provided as a vector, include
   # these values as a `df_tbl` object
   if (!is.null(preconditions)) {
+    
     preconditions_df <-
       1:nrow(validation_step_df) %>%
       purrr::map_df(
@@ -107,7 +118,9 @@ create_validation_step <- function(agent,
             x = x,
             precondition = paste(preconditions, collapse = ";"))}) %>%
       dplyr::select(-x)
+    
   } else {
+    
     preconditions_df <-
       1:nrow(validation_step_df) %>%
       purrr::map_df(
@@ -741,4 +754,251 @@ create_autobrief <- function(agent,
   }
   
   autobrief
+}
+
+# Perform a single column validation that
+# returns a vector of logical values
+#' @importFrom dplyr pull collect as_tibble
+evaluate_single <- function(object,
+                            type,
+                            column,
+                            value = NULL,
+                            set = NULL,
+                            regex = NULL,
+                            left = NULL,
+                            right = NULL,
+                            incl_na = NULL,
+                            incl_nan = NULL,
+                            warn_count,
+                            notify_count,
+                            warn_fraction,
+                            notify_fraction) {
+  
+  # Get the `column` number
+  col_number <- ((object %>% colnames()) %in% column) %>% which()
+  
+  if (type == "col_vals_equal") {
+    
+    logicals <- 
+      object %>%
+      dplyr::pull(col_number) == value
+  }
+  
+  if (type == "col_vals_not_equal") {
+    
+    logicals <- 
+      object %>%
+      dplyr::pull(col_number) != value
+  }
+  
+  if (type == "col_vals_gt") {
+    
+    logicals <- 
+      object %>%
+      dplyr::pull(col_number) > value
+  }
+  
+  if (type == "col_vals_gte") {
+    
+    logicals <- 
+      object %>%
+      dplyr::pull(col_number) >= value
+  }
+  
+  if (type == "col_vals_lt") {
+    
+    logicals <- 
+      object %>%
+      dplyr::pull(col_number) < value
+  }
+  
+  if (type == "col_vals_lte") {
+    
+    logicals <- 
+      object %>%
+      dplyr::pull(col_number) <= value
+  }
+  
+  if (type == "col_vals_between") {
+    
+    vals <- 
+      object %>%
+      dplyr::pull(col_number)
+    
+    logicals <- 
+      vals >= left &
+      vals <= right
+    
+    if (incl_na == TRUE) {
+      logicals[which(is.na(logicals))] <- TRUE
+    } else if (incl_na == FALSE) {
+      logicals[which(is.na(logicals))] <- FALSE
+    }
+    
+    if (incl_nan == TRUE) {
+      logicals[which(is.nan(logicals))] <- TRUE
+    } else if (incl_nan == FALSE) {
+      logicals[which(is.nan(logicals))] <- FALSE
+    }
+  }
+  
+  if (type == "col_vals_not_between") {
+    
+    vals <- 
+      object %>%
+      dplyr::pull(col_number)
+    
+    logicals <- 
+      vals < left |
+      vals > right
+    
+    if (incl_na == TRUE) {
+      logicals[which(is.na(logicals))] <- TRUE
+    } else if (incl_na == FALSE) {
+      logicals[which(is.na(logicals))] <- FALSE
+    }
+    
+    if (incl_nan == TRUE) {
+      logicals[which(is.nan(logicals))] <- TRUE
+    } else if (incl_nan == FALSE) {
+      logicals[which(is.nan(logicals))] <- FALSE
+    }
+  }
+  
+  if (type == "col_vals_in_set") {
+    
+    logicals <- 
+      object %>%
+      dplyr::pull(col_number) %in% set
+  }
+  
+  if (type == "col_vals_not_in_set") {
+    
+    logicals <- 
+      !(object %>%
+          dplyr::pull(col_number) %in% set)
+  }
+  
+  if (type == "col_vals_regex") {
+    
+    vals <- 
+      object %>%
+      dplyr::pull(col_number)
+    
+    logicals <- 
+      grepl(pattern = regex, x = vals)
+  }
+  
+  if (type == "col_vals_not_null") {
+    
+    logicals <- 
+      !is.na(object %>%
+               dplyr::pull(col_number))
+  }
+  
+  if (type == "col_vals_null") {
+    
+    logicals <- 
+      is.na(object %>%
+              dplyr::pull(col_number))
+  }
+  
+  if (grepl("col_is_.*", type)) {
+    
+    # Get the column type
+    column_type <-
+      (object %>%
+         dplyr::select(column) %>%
+         head(1) %>%
+         dplyr::collect() %>%
+         as.data.frame(stringsAsFactors = FALSE))[1, 1] %>% 
+      class()
+    
+    if (type == "col_is_numeric") {
+      logicals <- ifelse(column_type[1] == "numeric", TRUE, FALSE)
+    } else if (type == "col_is_integer") {
+      logicals <- ifelse(column_type[1] == "integer", TRUE, FALSE)
+    } else if (type == "col_is_character") {
+      logicals <- ifelse(column_type[1] == "character", TRUE, FALSE)
+    } else if (type == "col_is_logical") {
+      logicals <- ifelse(column_type[1] == "logical", TRUE, FALSE)
+    } else if (type == "col_is_factor") {
+      logicals <- ifelse(column_type[1] == "factor", TRUE, FALSE)
+    } else if (type == "col_is_posix") {
+      logicals <- ifelse(column_type[1] == "POSIXct", TRUE, FALSE)
+    } else if (type == "col_is_date") {
+      logicals <- ifelse(column_type[1] == "Date", TRUE, FALSE)
+    } else {
+      logicals <- FALSE
+    }
+  }
+  
+  if (type == "col_exists") {
+    
+    column_names <-
+      object %>%
+      head(1) %>%
+      dplyr::as_tibble() %>%
+      colnames()
+    
+    logicals <- ifelse(column %in% column_names, TRUE, FALSE)
+  }
+  
+  logicals[which(is.na(logicals))] <- FALSE
+  
+  total_count <- length(logicals)
+   true_count <- sum(logicals)
+  false_count <- total_count - true_count
+  false_fraction <- false_count / total_count
+  
+  if (!is.null(notify_count)) {
+    if (false_count >= notify_count) {
+      
+      messaging::emit_error(
+        "The validation (`{type}()`) is above the `notify_count` threshold",
+        " * `failing_count` ({false_count}) > `notify_count` ({notify_count})",
+        type = type,
+        false_count = false_count,
+        notify_count = notify_count,
+        .format = "ERROR {text}")
+    }
+  } else if (!is.null(notify_fraction)) {
+    if ((false_count/total_count) >= notify_fraction) {
+      
+      messaging::emit_error(
+        "The validation (`{type}()`) is above the `notify_fraction` threshold",
+        " * `failing_fraction` ({false_fraction}) > `notify_fraction` ({notify_fraction})",
+        type = type,
+        false_fraction = false_fraction,
+        notify_fraction = notify_fraction,
+        .format = "ERROR {text}")
+    }
+  }
+  
+  if (!is.null(warn_count)) {
+    if (false_count >= warn_count) {
+      
+      messaging::emit_warning(
+        "The validation (`{type}()`) is above the `warn_count` threshold",
+        " * `failing_count` ({false_count}) > `warn_count` ({warn_count})",
+        type = type,
+        false_count = false_count,
+        warn_count = warn_count,
+        .format = "WARN {text}")
+
+    }
+  } else if (!is.null(warn_fraction)) {
+    if ((false_count/total_count) >= warn_fraction) {
+      
+      messaging::emit_warning(
+        "The validation (`{type}()`) is above the `warn_fraction` threshold",
+        " * `failing_fraction` ({false_fraction}) > `warn_fraction` ({warn_fraction})",
+        type = type,
+        false_fraction = false_fraction,
+        warn_fraction = warn_fraction,
+        .format = "WARN {text}")
+    }
+  }
+  
+  logicals
 }

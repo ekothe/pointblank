@@ -23,8 +23,7 @@
 #'   user = "********",
 #'   password = "****************")
 #' }
-#' @export create_creds_file
-
+#' @export
 create_creds_file <- function(file,
                               dbname,
                               host,
@@ -44,4 +43,3 @@ create_creds_file <- function(file,
   # Save the credential values as a file
   saveRDS(credentials, file = file)
 }
-  

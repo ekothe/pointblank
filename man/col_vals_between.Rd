@@ -4,15 +4,16 @@
 \alias{col_vals_between}
 \title{Verify whether column data are between two values}
 \usage{
-col_vals_between(agent, column, left, right, preconditions = NULL,
-  brief = NULL, warn_count = 1, notify_count = NULL,
-  warn_fraction = NULL, notify_fraction = NULL, tbl_name = NULL,
-  db_type = NULL, creds_file = NULL, initial_sql = NULL,
-  file_path = NULL, col_types = NULL)
+col_vals_between(..., column, left, right, incl_na = FALSE,
+  incl_nan = FALSE, preconditions = NULL, brief = NULL,
+  warn_count = NULL, notify_count = NULL, warn_fraction = NULL,
+  notify_fraction = NULL, tbl_name = NULL, db_type = NULL,
+  creds_file = NULL, initial_sql = NULL, file_path = NULL,
+  col_types = NULL)
 }
 \arguments{
-\item{agent}{an agent object of class
-\code{ptblank_agent}.}
+\item{...}{a data frame, tibble, or an agent
+object of class \code{ptblank_agent}.}
 
 \item{column}{the column (or a set of columns,
 provided as a character vector) to which this
@@ -28,6 +29,12 @@ to values greater than \code{left}.}
 \item{right}{the upper bound for the range. The
 validation includes this bound value in addition
 to values lower than \code{right}.}
+
+\item{incl_na}{should \code{NA} values be a part
+of the condition? This is by default \code{FALSE}.}
+
+\item{incl_nan}{should \code{NaN} values be a part
+of the condition? This is by default \code{FALSE}.}
 
 \item{preconditions}{an optional statement of
 filtering conditions that may reduce the number
