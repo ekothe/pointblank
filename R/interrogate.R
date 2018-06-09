@@ -352,6 +352,10 @@ interrogate <- function(agent,
           dplyr::mutate(pb_is_good_ = case_when(
             rlang::UQ(column) %in% set ~ TRUE,
             !(rlang::UQ(column) %in% set) ~ FALSE
+            is.na(rlang::UQ(column)) & incl_na ~ TRUE, # Testing col_vals_in_set NA params
+            is.na(rlang::UQ(column)) & incl_na == FALSE ~ FALSE, # Testing col_vals_in_set NA params
+            is.nan(rlang::UQ(column)) & incl_nan ~ TRUE, # Testing col_vals_in_set NA params
+            is.nan(rlang::UQ(column)) & incl_nan == FALSE ~ FALSE # Testing col_vals_in_set NA params
           ))
       }
       

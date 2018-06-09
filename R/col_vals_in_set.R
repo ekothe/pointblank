@@ -14,6 +14,10 @@
 #' @param set a vector of numeric or string-based
 #' elements, where column values found within this
 #' \code{set} will be considered as passing.
+#' @param incl_na should \code{NA} values be a part
+#' of the condition? This is by default \code{FALSE}.
+#' @param incl_nan should \code{NaN} values be a part
+#' of the condition? This is by default \code{FALSE}.
 #' @param preconditions an optional statement of
 #' filtering conditions that may reduce the number
 #' of rows for validation for the current
@@ -124,6 +128,8 @@
 col_vals_in_set <- function(...,
                             column,
                             set,
+                            incl_na = FALSE,
+                            incl_nan = FALSE,
                             preconditions = NULL,
                             brief = NULL,
                             warn_count = NULL,
@@ -155,6 +161,8 @@ col_vals_in_set <- function(...,
           type = "col_vals_in_set",
           column = column,
           set = set,
+          incl_na = incl_na,
+          incl_nan = incl_nan,
           warn_count = warn_count,
           notify_count = notify_count,
           warn_fraction = warn_fraction,
@@ -198,6 +206,8 @@ col_vals_in_set <- function(...,
       assertion_type = "col_vals_in_set",
       column = column,
       set = set,
+      incl_na = incl_na,
+      incl_nan = incl_nan,
       preconditions = preconditions,
       brief = brief,
       warn_count = warn_count,
